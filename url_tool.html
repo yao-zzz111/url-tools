@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>网址工具</title>
+    <style>
+        :root {
+            --primary-color: #00b4ff;
+            --primary-dark: #0090cc;
+            --background-color: #0a1929;
+            --text-color: #e1e8ed;
+            --border-color: rgba(0, 180, 255, 0.2);
+            --card-bg: rgba(10, 25, 41, 0.95);
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: #000 url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop') no-repeat center center fixed;
+            background-size: cover;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            color: var(--text-color);
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(ellipse at center, rgba(10, 25, 41, 0.2) 0%, rgba(10, 25, 41, 0.8) 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        #nodeCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        
+        .logo {
+            margin-top: 50px;
+            margin-bottom: 20px;
+            font-size: 42px;
+            color: #fff;
+            font-weight: bold;
+            position: relative;
+            z-index: 3;
+            text-shadow: 0 0 20px rgba(0, 180, 255, 0.5);
+            animation: glow 3s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% {
+                text-shadow: 0 0 20px rgba(0, 180, 255, 0.5);
+            }
+            50% {
+                text-shadow: 0 0 40px rgba(0, 180, 255, 0.8), 0 0 60px rgba(0, 180, 255, 0.4);
+            }
+        }
+        
+        .container {
+            width: 1000px;
+            padding: 0;
+            background: transparent;
+            position: relative;
+            z-index: 3;
+        }
+        
+        .search-box {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            margin: 0 0 30px 0;
+            padding: 0;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            width: 100%;
+            max-width: 1000px;
+        }
+        
+        .tab {
+            flex: 0 1 auto;
+            min-width: 140px;
+            padding: 12px 24px;
+            cursor: pointer;
+            border: 1px solid rgba(0, 180, 255, 0.3);
+            background: rgba(10, 25, 41, 0.6);
+            font-size: 16px;
+            color: var(--text-color);
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+        
+        .tab::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, transparent, rgba(0, 180, 255, 0.3), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.5s ease;
+            z-index: -1;
+        }
+        
+        .tab:hover::before {
+            transform: translateX(100%);
+        }
+        
+        .tab.active {
+            background: rgba(0, 180, 255, 0.2);
+            border-color: rgba(0, 180, 255, 0.5);
+            box-shadow: 0 0 20px rgba(0, 180, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .tab:hover {
+            background: rgba(0, 180, 255, 0.15);
+            border-color: rgba(0, 180, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .module-container {
+            position: relative;
+            background: rgba(10, 25, 41, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(0, 180, 255, 0.2);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(0, 180, 255, 0.3);
+            transition: all 0.3s ease;
+            z-index: 3;
+            margin-top: 20px;
+            width: 100%;
+        }
+        
+        .module-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, 
+                rgba(0, 180, 255, 0.5), 
+                transparent 20%,
+                transparent 80%,
+                rgba(0, 180, 255, 0.5)
+            );
+            border-radius: 20px;
+            z-index: -1;
+            opacity: 0.5;
+            animation: borderGlow 3s ease-in-out infinite;
+        }
+        
+        @keyframes borderGlow {
+            0%, 100% {
+                opacity: 0.5;
+            }
+            50% {
+                opacity: 0.8;
+            }
+        }
+        
+        .module {
+            display: none;
+        }
+        
+        .module.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        textarea {
+            width: 100%;
+            height: 150px;
+            margin: 15px 0;
+            padding: 20px;
+            border: 1px solid rgba(0, 180, 255, 0.3);
+            border-radius: 15px;
+            resize: vertical;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            background: rgba(10, 25, 41, 0.95);
+            color: #fff;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        textarea::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        textarea::-webkit-scrollbar-track {
+            background: rgba(10, 25, 41, 0.95);
+            border-radius: 4px;
+        }
+        
+        textarea::-webkit-scrollbar-thumb {
+            background: rgba(0, 180, 255, 0.3);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 180, 255, 0.5);
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: rgba(0, 180, 255, 0.8);
+            box-shadow: 0 0 30px rgba(0, 180, 255, 0.2), 
+                        inset 0 0 20px rgba(0, 0, 0, 0.2);
+            background: rgba(10, 25, 41, 0.98);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: linear-gradient(45deg, 
+                rgba(0, 180, 255, 0.8), 
+                rgba(0, 144, 204, 0.9)
+            );
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            letter-spacing: 0.5px;
+            min-width: 100px;
+        }
+        
+        button::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            animation: buttonGlow 3s linear infinite;
+        }
+        
+        @keyframes buttonGlow {
+            0% {
+                transform: rotate(45deg) translateX(-100%);
+            }
+            100% {
+                transform: rotate(45deg) translateX(100%);
+            }
+        }
+        
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 20px rgba(0, 180, 255, 0.3);
+            background: linear-gradient(45deg, 
+                rgba(0, 180, 255, 0.9), 
+                rgba(0, 144, 204, 1)
+            );
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        h2 {
+            display: none;
+        }
+        
+        h3 {
+            color: rgba(0, 180, 255, 0.9);
+            margin: 25px 0 20px 0;
+            font-size: 20px;
+            font-weight: 500;
+            text-shadow: 0 0 15px rgba(0, 180, 255, 0.4);
+            letter-spacing: 1px;
+        }
+        
+        .result-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid rgba(0, 180, 255, 0.2);
+        }
+
+        .table-output {
+            margin-top: 20px;
+            background: rgba(10, 25, 41, 0.8);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .table-output th {
+            background: rgba(0, 180, 255, 0.1);
+            color: var(--text-color);
+            padding: 15px;
+            font-weight: 500;
+        }
+
+        .table-output td {
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        @media (max-width: 1100px) {
+            .container {
+                width: 95%;
+                margin: 0 15px;
+                padding: 0 10px;
+            }
+            
+            .tabs {
+                gap: 15px;
+            }
+            
+            .tab {
+                min-width: 120px;
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            
+            .module-container {
+                padding: 30px 20px;
+            }
+            
+            .logo {
+                font-size: 32px;
+                margin-top: 30px;
+                margin-bottom: 15px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .tab {
+                min-width: calc(50% - 15px);
+                flex: 1 1 auto;
+            }
+            
+            .button-group {
+                gap: 8px;
+                margin: 15px 0;
+            }
+            
+            button {
+                padding: 8px 16px;
+                font-size: 13px;
+                min-width: 90px;
+            }
+            
+            .module-container {
+                padding: 20px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="nodeCanvas"></canvas>
+    <div class="logo">网址工具</div>
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('format')">网址格式转换</button>
+            <button class="tab" onclick="switchTab('match')">IP随机匹配</button>
+            <button class="tab" onclick="switchTab('merge')">数据合并</button>
+            <button class="tab" onclick="switchTab('ec2')">EC2格式转换</button>
+            <button class="tab" onclick="switchTab('proxy')">代理批量转化</button>
+            <button class="tab" onclick="switchTab('formatConvert')">格式转换</button>
+        </div>
+
+        <div class="module-container">
+            <!-- 网址格式转换模块 -->
+            <div id="format" class="module active">
+                <h3>输入网址（每行一个）</h3>
+                <textarea id="urlInput" placeholder="请输入网址，每行一个，例如：&#10;https://www.github.com|ip=3.143.254.169&#10;https://www.google.com"></textarea>
+                
+                <div class="button-group">
+                    <button onclick="processUrls()">转换格式</button>
+                    <button onclick="copyResult('urlResult')">复制结果</button>
+                    <button onclick="addUrlExample()">加载示例</button>
+                </div>
+                
+                <div class="result-section">
+                    <h3>转换结果：</h3>
+                    <textarea id="urlResult" readonly></textarea>
+                </div>
+            </div>
+
+            <!-- IP随机匹配模块 -->
+            <div id="match" class="module">
+                <h3>输入IP列表（每行一个）</h3>
+                <textarea id="ipInput" placeholder="请输入IP列表，每行一个IP，例如：&#10;3.143.254.169&#10;3.133.151.34"></textarea>
+                
+                <div class="button-group">
+                    <button onclick="randomMatch()">随机匹配</button>
+                    <button onclick="copyResult('ipResult')">复制结果</button>
+                    <button onclick="addIpExample()">加载示例</button>
+                </div>
+                
+                <div class="result-section">
+                    <h3>匹配结果：</h3>
+                    <textarea id="ipResult" readonly></textarea>
+                </div>
+            </div>
+
+            <!-- 数据合并模块 -->
+            <div id="merge" class="module">
+                <h3>输入第一组IP数据</h3>
+                <textarea id="ipData1" placeholder="请输入第一组IP数据，每行一个"></textarea>
+                
+                <h3>输入第二组IP数据</h3>
+                <textarea id="ipData2" placeholder="请输入第二组IP数据，每行一个"></textarea>
+                
+                <div class="button-group">
+                    <button onclick="mergeData()">合并数据</button>
+                    <button onclick="copyResult('mergeResult')">复制结果</button>
+                    <button onclick="clearMergeData()">清空数据</button>
+                </div>
+                
+                <div class="result-section">
+                    <h3>合并结果：</h3>
+                    <div class="table-output">
+                        <table id="mergeTable">
+                            <thead>
+                                <tr>
+                                    <th>匹配的数据</th>
+                                    <th>未匹配的数据</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td id="matchedData"></td>
+                                    <td id="unmatchedData"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <textarea id="mergeResult" readonly style="display: none;"></textarea>
+                </div>
+            </div>
+
+            <!-- EC2格式转换模块 -->
+            <div id="ec2" class="module">
+                <h3>输入EC2实例数据</h3>
+                <textarea id="ec2Input" placeholder="请输入EC2实例数据，每行一个"></textarea>
+                
+                <div class="button-group">
+                    <button onclick="convertEC2Format()">转换格式</button>
+                    <button onclick="copyResult('ec2Result')">复制结果</button>
+                    <button onclick="clearEC2Data()">清空数据</button>
+                </div>
+                
+                <div class="result-section">
+                    <h3>转换结果：</h3>
+                    <textarea id="ec2Result" readonly></textarea>
+                </div>
+            </div>
+
+            <!-- 代理批量转化模块 -->
+            <div id="proxy" class="module">
+                <h3>输入代理数据</h3>
+                <textarea id="proxyInput" placeholder="请输入代理数据，每行一个，例如：&#10;http://yemu520-zone-abc-region-CA-session-hrfp7odJ-sessTime-120:node2022@na.114957ba811a1d5f.abcproxy.vip:4950"></textarea>
+                
+                <div class="button-group">
+                    <button onclick="convertProxy()">转换格式</button>
+                    <button onclick="copyResult('proxyResult')">复制结果</button>
+                    <button onclick="clearProxyData()">清空数据</button>
+                </div>
+                
+                <div class="result-section">
+                    <h3>转换结果：</h3>
+                    <textarea id="proxyResult" readonly></textarea>
+                </div>
+            </div>
+
+            <!-- 格式转换模块 -->
+            <div id="formatConvert" class="module">
+                <h3>输入原始数据</h3>
+                <textarea id="formatInput" placeholder="请输入需要转换的数据，每行一个"></textarea>
+                
+                <div class="button-group">
+                    <button onclick="convertFormat()">转换格式</button>
+                    <button onclick="copyResult('formatResult')">复制结果</button>
+                    <button onclick="clearFormatData()">清空数据</button>
+                </div>
+                
+                <div class="result-section">
+                    <h3>转换结果：</h3>
+                    <textarea id="formatResult" readonly></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let canvas, ctx, nodes = [], numNodes = 100;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            canvas = document.getElementById('nodeCanvas');
+            if (!canvas) {
+                console.error('Canvas element not found');
+                return;
+            }
+            
+            ctx = canvas.getContext('2d');
+            if (!ctx) {
+                console.error('Could not get 2d context');
+                return;
+            }
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+
+            function initNodes() {
+                nodes = [];
+                for (let i = 0; i < numNodes; i++) {
+                    nodes.push(new Node(
+                        Math.random() * canvas.width,
+                        Math.random() * canvas.height
+                    ));
+                }
+            }
+
+            class Node {
+                constructor(x, y) {
+                    this.x = x;
+                    this.y = y;
+                    this.vx = (Math.random() - 0.5) * 0.5;
+                    this.vy = (Math.random() - 0.5) * 0.5;
+                    this.radius = Math.random() * 1.5 + 0.5;
+                    this.alpha = Math.random() * 0.5 + 0.3;
+                    this.pulseSpeed = Math.random() * 0.02 + 0.01;
+                    this.pulseOffset = Math.random() * Math.PI * 2;
+                    this.glowRadius = this.radius * 3;
+                }
+
+                update() {
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    if (this.x < 0) {
+                        this.x = canvas.width;
+                    } else if (this.x > canvas.width) {
+                        this.x = 0;
+                    }
+                    if (this.y < 0) {
+                        this.y = canvas.height;
+                    } else if (this.y > canvas.height) {
+                        this.y = 0;
+                    }
+
+                    // 添加脉冲动画
+                    this.alpha = 0.3 + Math.sin(Date.now() * this.pulseSpeed + this.pulseOffset) * 0.2;
+                }
+
+                draw(ctx) {
+                    // 绘制星星的光晕
+                    const gradient = ctx.createRadialGradient(
+                        this.x, this.y, 0,
+                        this.x, this.y, this.glowRadius
+                    );
+                    gradient.addColorStop(0, `rgba(0, 180, 255, ${this.alpha})`);
+                    gradient.addColorStop(1, 'rgba(0, 180, 255, 0)');
+                    
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.glowRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+
+                    // 绘制星星的核心
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha + 0.3})`;
+                    ctx.fill();
+                }
+            }
+
+            function draw() {
+                if (!ctx || !canvas) return;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                nodes.forEach(node => {
+                    node.update();
+                    node.draw(ctx);
+                });
+
+                for (let i = 0; i < nodes.length; i++) {
+                    for (let j = i + 1; j < nodes.length; j++) {
+                        const dx = nodes[i].x - nodes[j].x;
+                        const dy = nodes[i].y - nodes[j].y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+
+                        if (distance < 100) {
+                            ctx.beginPath();
+                            ctx.moveTo(nodes[i].x, nodes[i].y);
+                            ctx.lineTo(nodes[j].x, nodes[j].y);
+                            const alpha = (1 - distance / 100) * 0.15;
+                            ctx.strokeStyle = `rgba(0, 180, 255, ${alpha})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.stroke();
+                        }
+                    }
+                }
+
+                requestAnimationFrame(draw);
+            }
+
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                initNodes();
+            });
+
+            resizeCanvas();
+            initNodes();
+            draw();
+        });
+
+        const predefinedUrls = [
+            "https://www.google.com"
+        ];
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            
+            document.querySelectorAll('.module').forEach(module => {
+                module.classList.remove('active');
+            });
+            
+            setTimeout(() => {
+                document.getElementById(tabId).classList.add('active');
+            }, 50);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function randomMatch() {
+            const ipInput = document.getElementById('ipInput').value.trim();
+            const ips = ipInput.split('\n').filter(ip => ip.trim());
+            
+            if (ips.length === 0) {
+                alert('请输入IP列表！');
+                return;
+            }
+
+            let urls = [...predefinedUrls];
+            urls = shuffleArray(urls);
+
+            const results = [];
+            
+            for (let i = 0; i < ips.length; i++) {
+                const ip = ips[i].trim();
+                if (!ip) continue;
+                const url = urls[i % urls.length];
+                results.push(`${url}|ip=${ip}`);
+            }
+            
+            document.getElementById('ipResult').value = results.join('\n');
+        }
+
+        function processUrls() {
+            const input = document.getElementById('urlInput').value.trim();
+            const urls = input.split('\n').filter(url => url.trim());
+            
+            const result = {
+                xapi: urls
+            };
+            
+            document.getElementById('urlResult').value = JSON.stringify(result, null, 4);
+        }
+        
+        function copyResult(elementId) {
+            const resultText = document.getElementById(elementId);
+            resultText.select();
+            document.execCommand('copy');
+            
+            const originalText = resultText.value;
+            resultText.value = '复制成功！';
+            setTimeout(() => {
+                resultText.value = originalText;
+            }, 500);
+        }
+
+        function addUrlExample() {
+            const exampleUrls = `https://www.github.com|ip=3.143.254.169
+https://www.baidu.com|ip=3.133.151.34
+https://www.google.com|ip=3.133.132.228
+https://uture.fastfuture.baby
+https://berhub.cyberhub.baby
+https://d1gko9qxtnwni5.cloudfront.net
+https://d2kophvynoy8vm.cloudfront.net`;
+            document.getElementById('urlInput').value = exampleUrls;
+        }
+
+        function addIpExample() {
+            const exampleIps = `3.143.254.169
+3.133.151.34
+3.133.132.228`;
+            document.getElementById('ipInput').value = exampleIps;
+        }
+
+        function mergeData() {
+            const data1 = document.getElementById('ipData1').value.trim().split('\n');
+            const data2 = document.getElementById('ipData2').value.trim().split('\n');
+            
+            const matched = [];
+            const unmatched = [];
+            
+            data1.forEach(item1 => {
+                if (data2.includes(item1)) {
+                    matched.push(item1);
+                } else {
+                    unmatched.push(item1);
+                }
+            });
+            
+            document.getElementById('matchedData').textContent = matched.join('\n');
+            document.getElementById('unmatchedData').textContent = unmatched.join('\n');
+        }
+
+        function clearMergeData() {
+            document.getElementById('ipData1').value = '';
+            document.getElementById('ipData2').value = '';
+            document.getElementById('matchedData').textContent = '';
+            document.getElementById('unmatchedData').textContent = '';
+        }
+
+        function convertEC2Format() {
+            const input = document.getElementById('ec2Input').value.trim();
+            const lines = input.split('\n').filter(line => line.trim());
+            
+            const results = lines.map(line => {
+                const parts = line.split('|');
+                if (parts.length >= 2) {
+                    return parts[1];
+                }
+                return line;
+            });
+            
+            document.getElementById('ec2Result').value = results.join('|');
+        }
+
+        function clearEC2Data() {
+            document.getElementById('ec2Input').value = '';
+            document.getElementById('ec2Result').value = '';
+        }
+
+        function convertProxy() {
+            const input = document.getElementById('proxyInput').value.trim();
+            const lines = input.split('\n').filter(line => line.trim());
+            
+            const results = lines.map(line => {
+                line = line.replace(/^https?:\/\//, '');
+                const [auth, hostPort] = line.split('@');
+                if (!auth || !hostPort) return line;
+                return `${hostPort}:${auth}`;
+            });
+            
+            document.getElementById('proxyResult').value = results.join('\n');
+        }
+
+        function clearProxyData() {
+            document.getElementById('proxyInput').value = '';
+            document.getElementById('proxyResult').value = '';
+        }
+
+        function convertFormat() {
+            const input = document.getElementById('formatInput').value.trim();
+            const lines = input.split('\n').filter(line => line.trim());
+            
+            const results = lines.map(line => {
+                line = line.replace(/\s+/g, '');
+                const numbers = line.split(/[:：]/);
+                return numbers.filter(num => num.trim()).join('|');
+            });
+            
+            document.getElementById('formatResult').value = results.join('\n');
+        }
+
+        function clearFormatData() {
+            document.getElementById('formatInput').value = '';
+            document.getElementById('formatResult').value = '';
+        }
+    </script>
+</body>
+</html> 
