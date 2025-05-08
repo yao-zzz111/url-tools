@@ -821,15 +821,36 @@ https://d2kophvynoy8vm.cloudfront.net`;
 
         function convertFormat() {
             const input = document.getElementById('formatInput').value.trim();
-            const lines = input.split('\n').filter(line => line.trim());
-            
-            const results = lines.map(line => {
-                line = line.replace(/\s+/g, '');
-                const numbers = line.split(/[:：]/);
-                return numbers.filter(num => num.trim()).join('|');
-            });
-            
-            document.getElementById('formatResult').value = results.join('\n');
+            let lines = input.split('\n').map(line => line.trim()).filter(line => line);
+
+            let numbers = [];
+            let inQuotes = false;
+            let quoteBuffer = [];
+
+            for (let line of lines) {
+                if (line.startsWith('"') && line.endsWith('"')) {
+                    let content = line.slice(1, -1).trim();
+                    if (content) {
+                        numbers.push(...content.split('\n').map(x => x.trim()).filter(x => x));
+                    }
+                } else if (line.startsWith('"')) {
+                    inQuotes = true;
+                    quoteBuffer.push(line.slice(1));
+                } else if (line.endsWith('"')) {
+                    quoteBuffer.push(line.slice(0, -1));
+                    numbers.push(...quoteBuffer.map(x => x.trim()).filter(x => x));
+                    quoteBuffer = [];
+                    inQuotes = false;
+                } else if (inQuotes) {
+                    quoteBuffer.push(line);
+                } else {
+                    numbers.push(line);
+                }
+            }
+
+            numbers = numbers.map(x => x.trim()).filter(x => x);
+
+            document.getElementById('formatResult').value = numbers.join('|');
         }
 
         function clearFormatData() {
